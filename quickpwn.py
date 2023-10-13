@@ -86,7 +86,7 @@ def main():
             cached_msf_searches = json.load(fp)
 
     print("Starting msfconsole in tmux session. Interact with it via 'tmux a -t qpwn-msfconsole'")
-    start_metasploit_tmux()
+    #start_metasploit_tmux()
 
     print("Creating scan thread.")
     process_scan_queue_thread = threading.Thread(target=process_scan_queue)
