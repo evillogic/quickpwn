@@ -171,6 +171,7 @@ class AutoScanner:
 
         return self.scan_results
     
+    # This is the new function
     def load_nmap_output(self, filename: str, apiKey: str = None) -> JSON:
         nm = PortScanner()
         nm.analyse_nmap_xml_scan(filename)

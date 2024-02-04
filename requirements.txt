@@ -1,3 +1,4 @@
 autopwn_suite==2.1.5
 ping3==4.0.4
 pymetasploit3==1.0.3
+python-nmap==0.7.1
