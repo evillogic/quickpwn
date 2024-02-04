@@ -12,7 +12,7 @@ from nmap import PortScanner
 import logging
 logging.basicConfig(level=logging.NOTSET)
 
-DEFAULT_NMAP_ARGS = "-T4 --open -n"
+DEFAULT_NMAP_ARGS = "-sV -T4 --open -n"
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="QuickPwn - Automatically find and exploit vulnerabilities in a network.")
@@ -22,7 +22,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-i", "--ip", help="Single IP to scan.")
     parser.add_argument("-f", "--file", help="File containing IPs to scan.")
     parser.add_argument("-m", "--mqtt", help="Whether to use MQTT for communication.", action="store_true")
-    parser.add_argument("-t", "--threads", help="Number of threads to use.", default=10)
+    parser.add_argument("-t", "--threads", help="Number of threads to use.", default=10, type=int)
 
     # Output arguments
     parser.add_argument("-sO", "--scan-output", help="File to save scan results to.")
@@ -53,7 +53,7 @@ def main():
     args = parse_arguments()
 
     if not args.mqtt:
-        runner = AsyncRunner(threads=args.threads, exploit_enabled=args.exploit)
+        runner = AsyncRunner(threads=args.threads, exploit_enabled=args.exploit, key=args.key)
 
         # If not a saved scan, generate the IP list and add each IP chunk to the nmap queue.
         if not args.saved_scan:
@@ -62,7 +62,7 @@ def main():
             targets = generate_ip_list(args)
             for hosts in chunk_list(targets, args.chunk_size):
                 scanner_args = {"hosts": ",".join(hosts), "nmap_args": args.nmap_args}
-                runner.submit(run_nmap_scan, scanner_args)
+                runner.submit(run_nmap_scan, scanner_args, runner)
         else:
             logging.info("Using saved scan")
             logging.info("Loading saved scan...")

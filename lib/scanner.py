@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Type, Union
 
 from nmap import PortScanner
 
-from autopwn_suite.modules.nist_search import searchCVE
+from lib.nist_search import searchCVE
 from autopwn_suite.modules.searchvuln import GenerateKeyword
 from autopwn_suite.modules.utils import fake_logger, is_root
 
