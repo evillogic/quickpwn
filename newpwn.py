@@ -8,11 +8,11 @@
 # This file is used as the main cli to run the quickpwn suite.
 
 import argparse
-from lib.helper import generate_ip_list, chunk_list
+from lib.helper import generate_ip_list, chunk_list, configure_logging
 from lib.runner import AsyncRunner, run_nmap_scan, run_cve_lookup, run_msf_exploit
 from nmap import PortScanner
 import logging
-logging.basicConfig(level=logging.NOTSET)
+import art
 
 DEFAULT_NMAP_ARGS = "-sV -T4 --open -n"
 
@@ -52,6 +52,8 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 def main():
+    art.tprint("QuickPwn")
+    configure_logging()
     args = parse_arguments()
 
     if not args.mqtt:

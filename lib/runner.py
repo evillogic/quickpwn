@@ -24,7 +24,7 @@ class AsyncRunner:
             self.metasploit_container = self.docker_client.containers.run(
                 "metasploitframework/metasploit-framework:6.3.47",
                 detach=True,
-                ports={"55553/tcp": 55553},
+                ports={"55553/tcp": 55553, "4444/tcp": 4444},
                 tty=True,
                 command="./msfconsole -x \"load msgrpc Pass='msf' User='msf' SSL=false ServerHost=0.0.0.0 ServerPort=55553\""
             )
@@ -79,5 +79,4 @@ def run_cve_lookup(cve_task: dict) -> dict:
 
 def run_msf_exploit(exploit_task: dict):
     logging.info("Running exploit")
-    
     pass

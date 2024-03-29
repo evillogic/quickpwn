@@ -3,4 +3,4 @@ ping3==4.0.4
 pymetasploit3==1.0.3
 python-nmap==0.7.1
 docker>=7.0.0
-pymetasploit3==1.0.2
+art >= 6.1
