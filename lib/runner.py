@@ -3,6 +3,9 @@ from nmap import PortScanner
 from lib.scanner import AutoScanner
 import logging
 import signal
+from pymetasploit3.msfrpc import MsfRpcClient
+import docker
+from time import sleep
 
 class AsyncRunner:
     def __init__(self, threads: int = 100, exploit_enabled: bool = False, key: str = None):
@@ -14,6 +17,28 @@ class AsyncRunner:
 
         # Register signal handler
         signal.signal(signal.SIGINT, self.shutdown)
+
+        if self.exploit_enabled:
+            # Start metasploit container
+            self.docker_client = docker.from_env()
+            self.metasploit_container = self.docker_client.containers.run(
+                "metasploitframework/metasploit-framework:6.3.47",
+                detach=True,
+                ports={"55553/tcp": 55553},
+                tty=True,
+                command="./msfconsole -x \"load msgrpc Pass='msf' User='msf' SSL=false ServerHost=0.0.0.0 ServerPort=55553\""
+            )
+            logging.info("Waiting for metasploit to start...")
+            sleep(10)
+            #logging.info(f"Metasploit container started: {self.metasploit_container.logs()}")
+            # equivalent cli command is `docker run -d -p 55553:55553 metasploitframework/metasploit-framework:6.3.47`
+            logging.info(f"Metasploit container started: {self.metasploit_container.id}")
+            #output = self.metasploit_container.exec_run("load msgrpc Pass='msf' User='msf' SSL=false ServerHost=metasploit ServerPort=55553")
+            #logging.info(f"Metasploit output: {output}")
+
+            # Connect to metasploit
+            self.client = MsfRpcClient("msf", server="localhost", port=55553)
+            logging.info("Connected to metasploit")
     
     def submit(self, func, *args):
         future = self.executor.submit(func, *args)
@@ -22,6 +47,10 @@ class AsyncRunner:
     def shutdown(self, signum = None, frame = None):
         logging.info("Shutting down...")
         self.executor.shutdown(wait=True, cancel_futures=True)
+        if self.exploit_enabled:
+            self.metasploit_container.stop()
+            self.metasploit_container.remove()
+            logging.info("Metasploit container stopped")
 
     def wait(self):
         for future in as_completed(self.futures):
@@ -38,15 +67,17 @@ def run_nmap_scan(scanner_args: dict, runner: AsyncRunner) -> str:
     logging.info(f"Scanned {scanner_args['hosts']}")
     return nm.get_nmap_last_output()
 
-def run_cve_lookup(scanner_args: dict) -> dict:
+def run_cve_lookup(cve_task: dict) -> dict:
     logging.info(f"Looking up CVEs")
     scanner = AutoScanner()
-    results = scanner.load_nmap_output(scanner_args["nmap_output"], scanner_args["key"])
+    results = scanner.load_nmap_output(cve_task["nmap_output"], cve_task["key"])
     # results is a dictionary of the form {ip: {ports: {...}, vulns: {}}}
     for ip in results:
         for port in results[ip]["vulns"]:
             logging.info(f"IP: {ip}, Port: {port}, Vulns: {results[ip]['vulns'][port]}")
     return results
 
-def run_msf_exploit(scanner_args: dict):
+def run_msf_exploit(exploit_task: dict):
+    logging.info("Running exploit")
+    
     pass

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Quickpwn is a set of 3 microservices that automatically find end exploit vulnerabilities in a network.
 # 1. scanner.py - Scans a network for hosts and ports using nmap
 # 2. cve-lookup - Uses autopwn-suite to find CVEs for service/product
@@ -60,6 +62,7 @@ def main():
             logging.info("Running new scan")
             logging.info("Adding IPs to scan queue...")
             targets = generate_ip_list(args)
+            logging.info(f"Scanning {len(targets)} IPs...")
             for hosts in chunk_list(targets, args.chunk_size):
                 scanner_args = {"hosts": ",".join(hosts), "nmap_args": args.nmap_args}
                 runner.submit(run_nmap_scan, scanner_args, runner)
