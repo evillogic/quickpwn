@@ -50,6 +50,7 @@ class CustomFormatter(logging.Formatter):
 
 def configure_logging():
     # Configure the root logger
+    # Not sure why this needs to be done, but it does
     logging.basicConfig(level=logging.DEBUG)
 
     # Get the root logger

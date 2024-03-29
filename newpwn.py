@@ -9,7 +9,7 @@
 
 import argparse
 from lib.helper import generate_ip_list, chunk_list, configure_logging
-from lib.runner import AsyncRunner, run_nmap_scan, run_cve_lookup, run_msf_exploit
+from lib.runner import AsyncRunner, run_nmap_scan, run_cve_lookup
 from nmap import PortScanner
 import logging
 import art
@@ -77,7 +77,7 @@ def main():
             # This section is not done, how does the cve queue get populated?
             for host in scanner.all_hosts():
                 lookup_args = {"nmap_output": host, "key": args.key}
-                runner.submit(run_cve_lookup, lookup_args)
+                runner.submit(run_cve_lookup, lookup_args, runner)
     
         runner.wait()
 

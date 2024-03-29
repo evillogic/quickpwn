@@ -6,6 +6,7 @@ import signal
 from pymetasploit3.msfrpc import MsfRpcClient
 import docker
 from time import sleep
+from lib.printers import print_scan_results, print_vuln_details
 
 class AsyncRunner:
     def __init__(self, threads: int = 100, exploit_enabled: bool = False, key: str = None):
@@ -56,27 +57,25 @@ class AsyncRunner:
         for future in as_completed(self.futures):
             pass
         self.shutdown()
-        
+
 def run_nmap_scan(scanner_args: dict, runner: AsyncRunner) -> str:
     nm = PortScanner()
     nm.scan(hosts=scanner_args["hosts"], arguments=scanner_args["nmap_args"])
+    print_scan_results(nm)
     task = {"nmap_output": nm.get_nmap_last_output(), "key": runner.key}
     # This won't work with ProcessPoolExecutor as is because runner is not pickleable
     # Runner is a reference to the AsyncRunner object that is calling this function
-    runner.executor.submit(run_cve_lookup, task)
-    logging.info(f"Scanned {scanner_args['hosts']}")
+    runner.executor.submit(run_cve_lookup, task, runner)
     return nm.get_nmap_last_output()
-
-def run_cve_lookup(cve_task: dict) -> dict:
+ 
+def run_cve_lookup(cve_task: dict, runner: AsyncRunner) -> dict:
     logging.info(f"Looking up CVEs")
     scanner = AutoScanner()
     results = scanner.load_nmap_output(cve_task["nmap_output"], cve_task["key"])
     # results is a dictionary of the form {ip: {ports: {...}, vulns: {}}}
-    for ip in results:
-        for port in results[ip]["vulns"]:
-            logging.info(f"IP: {ip}, Port: {port}, Vulns: {results[ip]['vulns'][port]}")
+    print_vuln_details(results)
     return results
 
-def run_msf_exploit(exploit_task: dict):
+def run_msf_exploit(exploit_task: dict, runner: AsyncRunner):
     logging.info("Running exploit")
     pass
