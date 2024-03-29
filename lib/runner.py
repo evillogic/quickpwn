@@ -7,13 +7,14 @@ from pymetasploit3.msfrpc import MsfRpcClient
 import docker
 from time import sleep
 from lib.printers import print_scan_results, print_vuln_details
+from lib.metasploit import MsfExploitRunner
 
 class AsyncRunner:
     def __init__(self, threads: int = 100, exploit_enabled: bool = False, key: str = None):
         self.threads = threads
         self.exploit_enabled = exploit_enabled
         self.key = key
-        self.futures = []
+        self.futures = set()
         self.executor = ThreadPoolExecutor(max_workers=self.threads)
 
         # Register signal handler
@@ -43,7 +44,8 @@ class AsyncRunner:
     
     def submit(self, func, *args):
         future = self.executor.submit(func, *args)
-        self.futures.append(future)
+        future.add_done_callback(self.futures.discard)
+        self.futures.add(future)
 
     def shutdown(self, signum = None, frame = None):
         logging.info("Shutting down...")
@@ -54,8 +56,9 @@ class AsyncRunner:
             logging.info("Metasploit container stopped")
 
     def wait(self):
-        for future in as_completed(self.futures):
-            pass
+        while self.futures:
+            # Sleep briefly to yield control and reduce busy waiting
+            sleep(0.1)
         self.shutdown()
 
 def run_nmap_scan(scanner_args: dict, runner: AsyncRunner) -> str:
@@ -65,7 +68,7 @@ def run_nmap_scan(scanner_args: dict, runner: AsyncRunner) -> str:
     task = {"nmap_output": nm.get_nmap_last_output(), "key": runner.key}
     # This won't work with ProcessPoolExecutor as is because runner is not pickleable
     # Runner is a reference to the AsyncRunner object that is calling this function
-    runner.executor.submit(run_cve_lookup, task, runner)
+    runner.submit(run_cve_lookup, task, runner)
     return nm.get_nmap_last_output()
  
 def run_cve_lookup(cve_task: dict, runner: AsyncRunner) -> dict:
@@ -74,8 +77,18 @@ def run_cve_lookup(cve_task: dict, runner: AsyncRunner) -> dict:
     results = scanner.load_nmap_output(cve_task["nmap_output"], cve_task["key"])
     # results is a dictionary of the form {ip: {ports: {...}, vulns: {}}}
     print_vuln_details(results)
+    # Run a hail mary exploit on the IP and port
+    if runner.exploit_enabled:
+        for port in list(results.values())[0]["ports"]:
+            exploit_task = {"ip": list(results.keys())[0], "port": port}
+            runner.submit(run_msf_exploit, exploit_task, runner)
     return results
 
 def run_msf_exploit(exploit_task: dict, runner: AsyncRunner):
-    logging.info("Running exploit")
-    pass
+    logging.info(f"Running exploit against {exploit_task['ip']}:{exploit_task['port']}")
+    try:
+        exploiter = MsfExploitRunner(runner.client, exploit_task["ip"], exploit_task["port"])
+        exploiter.run_msf_hail_mary_on_ip_port(exploit_task["ip"], exploit_task["port"])
+    except Exception as e:
+        logging.error(f"Error running exploit: {e}")
+    return True
